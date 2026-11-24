@@ -405,6 +405,15 @@ func TestBuildRequestBody_MapsOpenCodeReasoningEffort(t *testing.T) {
 	}
 }
 
+func TestProvider_SupportsThinkingForOpenCode(t *testing.T) {
+	p := NewProvider("key", "https://opencode.ai/inference/go/openai/v1", "")
+	p.SetProviderName("opencode")
+
+	if !p.SupportsThinking() {
+		t.Fatal("opencode provider SupportsThinking() = false, want true")
+	}
+}
+
 func TestProviderChat_ParsesReasoningContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]any{

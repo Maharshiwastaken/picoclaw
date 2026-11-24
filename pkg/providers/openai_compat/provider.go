@@ -224,13 +224,13 @@ func (p *Provider) applyThinkingControl(requestBody map[string]any, model string
 		return
 	}
 
-	if p.SupportsThinking() {
-		p.applyDeepSeekThinkingControl(requestBody, level)
+	if isOpenCodeHost(p.apiBase) || strings.EqualFold(strings.TrimSpace(p.providerName), "opencode") {
+		p.applyOpenCodeReasoningEffort(requestBody, level)
 		return
 	}
 
-	if isOpenCodeHost(p.apiBase) || strings.EqualFold(strings.TrimSpace(p.providerName), "opencode") {
-		p.applyOpenCodeReasoningEffort(requestBody, level)
+	if p.SupportsThinking() {
+		p.applyDeepSeekThinkingControl(requestBody, level)
 		return
 	}
 
@@ -363,6 +363,9 @@ func (p *Provider) SetProviderName(providerName string) {
 }
 
 func (p *Provider) SupportsThinking() bool {
+	if strings.EqualFold(strings.TrimSpace(p.providerName), "opencode") || isOpenCodeHost(p.apiBase) {
+		return true
+	}
 	return strings.EqualFold(strings.TrimSpace(p.providerName), "deepseek") || isDeepSeekHost(p.apiBase)
 }
 
