@@ -358,6 +358,19 @@ func (p *Provider) applyCustomHeaders(req *http.Request) {
 	}
 }
 
+// applyOpenCodeSessionHeader sends the per-conversation session ID that OpenCode
+// Go requires on chat requests (x-opencode-session) so it can route and cache
+// prompts efficiently. Requests without the header are rejected with
+// MissingSessionID.
+func (p *Provider) applyOpenCodeSessionHeader(req *http.Request, options map[string]any) {
+	if !isOpenCodeHost(p.apiBase) && !strings.EqualFold(strings.TrimSpace(p.providerName), "opencode") {
+		return
+	}
+	if session, ok := options["opencode_session"].(string); ok && strings.TrimSpace(session) != "" {
+		req.Header.Set("x-opencode-session", strings.TrimSpace(session))
+	}
+}
+
 func (p *Provider) SetProviderName(providerName string) {
 	p.providerName = strings.ToLower(strings.TrimSpace(providerName))
 }
@@ -526,6 +539,7 @@ func (p *Provider) Chat(
 		req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
 	p.applyCustomHeaders(req)
+	p.applyOpenCodeSessionHeader(req, options)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
@@ -598,6 +612,7 @@ func (p *Provider) ChatStreamEvents(
 		req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
 	p.applyCustomHeaders(req)
+	p.applyOpenCodeSessionHeader(req, options)
 
 	// Use a client without Timeout for streaming — the http.Client.Timeout covers
 	// the entire request lifecycle including body reads, which would kill long streams.

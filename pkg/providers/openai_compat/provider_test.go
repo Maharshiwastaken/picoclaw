@@ -1528,6 +1528,64 @@ func TestProviderChatStream_CustomHeadersInjected(t *testing.T) {
 	}
 }
 
+func TestProviderChat_SendsOpenCodeSessionHeader(t *testing.T) {
+	var gotSession string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotSession = r.Header.Get("x-opencode-session")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{"message": map[string]any{"content": "ok"}, "finish_reason": "stop"}},
+		})
+	}))
+	defer server.Close()
+
+	p := NewProvider("key", server.URL, "")
+	p.SetProviderName("opencode")
+
+	_, err := p.Chat(
+		t.Context(),
+		[]Message{{Role: "user", Content: "hi"}},
+		nil,
+		"deepseek-v4.1-flash",
+		map[string]any{"opencode_session": "sess-123"},
+	)
+	if err != nil {
+		t.Fatalf("Chat() error = %v", err)
+	}
+	if gotSession != "sess-123" {
+		t.Fatalf("x-opencode-session = %q, want %q", gotSession, "sess-123")
+	}
+}
+
+func TestProviderChat_OmitsOpenCodeSessionHeaderForOtherProviders(t *testing.T) {
+	var gotSession string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotSession = r.Header.Get("x-opencode-session")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{"message": map[string]any{"content": "ok"}, "finish_reason": "stop"}},
+		})
+	}))
+	defer server.Close()
+
+	p := NewProvider("key", server.URL, "")
+	p.SetProviderName("deepseek")
+
+	_, err := p.Chat(
+		t.Context(),
+		[]Message{{Role: "user", Content: "hi"}},
+		nil,
+		"deepseek-chat",
+		map[string]any{"opencode_session": "sess-123"},
+	)
+	if err != nil {
+		t.Fatalf("Chat() error = %v", err)
+	}
+	if gotSession != "" {
+		t.Fatalf("x-opencode-session = %q, want empty for non-opencode provider", gotSession)
+	}
+}
+
 func TestProviderChatStream_ParsesReasoningContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
