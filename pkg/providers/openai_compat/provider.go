@@ -62,6 +62,7 @@ var stripModelPrefixProviders = map[string]struct{}{
 	"deepseek":    {},
 	"google":      {},
 	"openrouter":  {},
+	"opencode":    {},
 	"siliconflow": {},
 	"zhipu":       {},
 	"mistral":     {},
@@ -228,6 +229,11 @@ func (p *Provider) applyThinkingControl(requestBody map[string]any, model string
 		return
 	}
 
+	if isOpenCodeHost(p.apiBase) || strings.EqualFold(strings.TrimSpace(p.providerName), "opencode") {
+		p.applyOpenCodeReasoningEffort(requestBody, level)
+		return
+	}
+
 	if level != "off" {
 		return
 	}
@@ -259,6 +265,26 @@ func (p *Provider) applyDeepSeekThinkingControl(requestBody map[string]any, leve
 				"thinking_level": level,
 			},
 		)
+	}
+}
+
+// applyOpenCodeReasoningEffort maps PicoClaw thinking levels to OpenCode Go's
+// OpenAI-compatible reasoning_effort field. OpenCode Go serves reasoning models
+// such as DeepSeek V4.1 Flash behind an OpenAI-compatible endpoint, so it reads
+// the standard reasoning_effort values rather than DeepSeek's native "thinking"
+// envelope.
+func (p *Provider) applyOpenCodeReasoningEffort(requestBody map[string]any, level string) {
+	switch level {
+	case "low":
+		requestBody["reasoning_effort"] = "low"
+	case "medium", "high":
+		requestBody["reasoning_effort"] = "high"
+	case "xhigh":
+		requestBody["reasoning_effort"] = "max"
+	case "off", "adaptive":
+		// Reasoning models on OpenCode Go cannot be fully disabled, and
+		// "adaptive" has no direct reasoning_effort equivalent, so leave the
+		// provider default instead of sending an unsupported value.
 	}
 }
 
@@ -365,6 +391,15 @@ func isDeepSeekHost(apiBase string) bool {
 	}
 	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
 	return host == "deepseek.com" || strings.HasSuffix(host, ".deepseek.com")
+}
+
+func isOpenCodeHost(apiBase string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(apiBase))
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	return host == "opencode.ai" || strings.HasSuffix(host, ".opencode.ai")
 }
 
 func isMiMoHost(apiBase string) bool {

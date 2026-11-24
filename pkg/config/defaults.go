@@ -100,6 +100,14 @@ func DefaultConfig() *Config {
 				APIBase:   "https://api.deepseek.com/v1",
 			},
 
+			// OpenCode Go - https://opencode.ai/console
+			{
+				ModelName: "opencode-deepseek-flash",
+				Provider:  "opencode",
+				Model:     "deepseek-v4.1-flash",
+				APIBase:   "https://opencode.ai/inference/go/openai/v1",
+			},
+
 			// Venice AI - https://venice.ai
 			{
 				ModelName: "venice-uncensored",

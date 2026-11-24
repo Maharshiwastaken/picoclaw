@@ -63,6 +63,13 @@
       "api_keys": ["sk-your-deepseek-key"]
     },
     {
+      "model_name": "opencode-deepseek-flash",
+      "_comment": "OpenCode Go inference (https://opencode.ai/console). thinking_level low|high|xhigh maps to reasoning_effort low|high|max.",
+      "model": "opencode/deepseek-v4.1-flash",
+      "api_keys": ["YOUR_OPENCODE_GO_API_KEY"],
+      "thinking_level": "low"
+    },
+    {
       "model_name": "venice-uncensored",
       "model": "venice/venice-uncensored",
       "api_keys": ["your-venice-api-key"]

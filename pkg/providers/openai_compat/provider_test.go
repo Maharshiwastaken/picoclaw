@@ -364,6 +364,47 @@ func TestProviderChat_ParsesToolCallsWithObjectArguments(t *testing.T) {
 	}
 }
 
+func TestBuildRequestBody_MapsOpenCodeReasoningEffort(t *testing.T) {
+	p := NewProvider("key", "https://opencode.ai/inference/go/openai/v1", "")
+	p.SetProviderName("opencode")
+
+	tests := []struct {
+		level      string
+		wantEffort any
+	}{
+		{level: "low", wantEffort: "low"},
+		{level: "medium", wantEffort: "high"},
+		{level: "high", wantEffort: "high"},
+		{level: "xhigh", wantEffort: "max"},
+		{level: "off", wantEffort: nil},
+		{level: "adaptive", wantEffort: nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.level, func(t *testing.T) {
+			body := p.buildRequestBody(
+				[]Message{{Role: "user", Content: "hi"}},
+				nil,
+				"deepseek-v4.1-flash",
+				map[string]any{"thinking_level": tt.level},
+			)
+
+			if tt.wantEffort == nil {
+				if _, ok := body["reasoning_effort"]; ok {
+					t.Fatalf("reasoning_effort should be omitted for %q, got %#v", tt.level, body["reasoning_effort"])
+				}
+			} else if got := body["reasoning_effort"]; got != tt.wantEffort {
+				t.Fatalf("reasoning_effort = %#v, want %#v", got, tt.wantEffort)
+			}
+
+			// OpenCode Go must not receive DeepSeek's native "thinking" envelope.
+			if _, ok := body["thinking"]; ok {
+				t.Fatalf("thinking should be omitted for opencode %q, got %#v", tt.level, body["thinking"])
+			}
+		})
+	}
+}
+
 func TestProviderChat_ParsesReasoningContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]any{
@@ -1131,6 +1172,11 @@ func TestProviderChat_StripsKnownProviderPrefixes(t *testing.T) {
 			name:      "strips deepseek prefix",
 			input:     "deepseek/deepseek-chat",
 			wantModel: "deepseek-chat",
+		},
+		{
+			name:      "strips opencode prefix",
+			input:     "opencode/deepseek-v4.1-flash",
+			wantModel: "deepseek-v4.1-flash",
 		},
 		{
 			name:      "strips vivgrid prefix",
